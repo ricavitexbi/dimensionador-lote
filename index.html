@@ -1,0 +1,807 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Sirros · Dimensionador de Lote</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link
+    href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap"
+    rel="stylesheet"
+  />
+  <style>
+    :root {
+      --bg: #0B1220;
+      --bg-soft: #0E1627;
+      --card: #15213A;
+      --card-alt: #1A2B47;
+      --border: #1F2B47;
+      --border-soft: #243350;
+      --primary: #2563EB;
+      --primary-hover: #1D4ED8;
+      --primary-soft: rgba(37, 99, 235, 0.12);
+      --text-primary: #F1F5F9;
+      --text-soft: #CBD5E1;
+      --text-muted: #64748B;
+      --label: #94A3B8;
+      --success: #10B981;
+      --success-soft: rgba(16, 185, 129, 0.12);
+      --danger: #EF4444;
+      --danger-soft: rgba(239, 68, 68, 0.12);
+      --warning: #F59E0B;
+      --warning-soft: rgba(245, 158, 11, 0.12);
+      --accent: #3B82F6;
+      --accent-soft: rgba(59, 130, 246, 0.12);
+      --mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, monospace;
+    }
+
+    * { box-sizing: border-box; }
+
+    html, body {
+      margin: 0;
+      padding: 0;
+      background: var(--bg);
+      color: var(--text-primary);
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      min-height: 100vh;
+      font-size: 14px;
+      line-height: 1.5;
+    }
+
+    /* ====== Header ====== */
+    .header {
+      border-bottom: 1px solid var(--border);
+      padding: 18px 32px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background: var(--bg-soft);
+    }
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+    .brand-mark {
+      width: 28px; height: 28px; border-radius: 6px;
+      background: linear-gradient(135deg, var(--primary), var(--accent));
+      display: flex; align-items: center; justify-content: center;
+    }
+    .brand-mark::after {
+      content: '';
+      width: 10px; height: 10px; border-radius: 2px;
+      background: var(--bg);
+    }
+    .brand-name {
+      font-size: 18px; font-weight: 600; letter-spacing: -0.02em;
+    }
+    .brand-divider {
+      width: 1px; height: 20px; background: var(--border); margin: 0 6px;
+    }
+    .brand-tag {
+      font-size: 13px; color: var(--label); font-weight: 500;
+    }
+    .status-pill {
+      display: flex; align-items: center; gap: 8px;
+      padding: 6px 12px;
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      font-size: 12px; color: var(--text-soft);
+    }
+    .status-dot {
+      width: 6px; height: 6px; border-radius: 50%;
+      background: var(--success);
+      box-shadow: 0 0 8px var(--success);
+    }
+
+    /* ====== Main layout ====== */
+    .main {
+      max-width: 1280px; margin: 0 auto;
+      padding: 32px;
+    }
+    h1.title {
+      font-size: 34px; font-weight: 600;
+      letter-spacing: -0.03em;
+      margin: 0 0 8px; line-height: 1.15;
+    }
+    .subtitle {
+      font-size: 14px; color: var(--label);
+      max-width: 620px; line-height: 1.6;
+      margin: 0 0 32px;
+    }
+    .grid {
+      display: grid;
+      grid-template-columns: 1fr 340px;
+      gap: 24px;
+      align-items: start;
+    }
+    @media (max-width: 900px) {
+      .grid { grid-template-columns: 1fr; }
+    }
+
+    /* ====== Cards ====== */
+    .card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 28px;
+    }
+    .card-head {
+      display: flex; align-items: center; gap: 10px;
+      margin-bottom: 24px; padding-bottom: 16px;
+      border-bottom: 1px solid var(--border-soft);
+    }
+    .card-head h2 {
+      font-size: 15px; font-weight: 600;
+      letter-spacing: -0.01em;
+      margin: 0;
+    }
+    .card-head svg { color: var(--accent); }
+
+    /* ====== Form ====== */
+    .field-label {
+      display: block;
+      font-size: 11px; font-weight: 500;
+      color: var(--label);
+      margin-bottom: 6px;
+      letter-spacing: 0.02em;
+      text-transform: uppercase;
+    }
+    .field-label .opt {
+      color: var(--text-muted); font-weight: 400; text-transform: none; letter-spacing: 0;
+    }
+    input[type="text"] {
+      width: 100%;
+      padding: 10px 12px;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      color: var(--text-primary);
+      font-size: 13px;
+      font-family: inherit;
+      outline: none;
+      transition: border-color 0.15s;
+    }
+    input[type="text"]:focus { border-color: var(--primary); }
+
+    .field-spacer { margin-top: 20px; }
+
+    .material-row {
+      display: flex; gap: 8px;
+    }
+    .mat-btn {
+      flex: 1;
+      padding: 10px 12px;
+      border-radius: 6px;
+      font-size: 13px; font-weight: 500;
+      cursor: pointer;
+      transition: all 0.15s;
+      border: 1px solid var(--border);
+      background: var(--bg-soft);
+      color: var(--text-soft);
+      font-family: inherit;
+      text-align: center;
+    }
+    .mat-btn .density {
+      font-size: 10px; color: var(--text-muted); margin-top: 2px;
+      font-family: var(--mono);
+    }
+    .mat-btn.active {
+      border-color: var(--primary);
+      background: var(--primary-soft);
+      color: var(--text-primary);
+    }
+
+    .dim-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 14px;
+      margin-top: 20px;
+    }
+    @media (max-width: 600px) {
+      .dim-grid { grid-template-columns: 1fr; }
+    }
+    .input-suffix {
+      position: relative;
+      display: flex; align-items: center;
+    }
+    .input-suffix input { padding-right: 44px; }
+    .input-suffix .suffix {
+      position: absolute; right: 10px;
+      font-size: 11px; color: var(--text-muted);
+      font-family: var(--mono);
+      pointer-events: none;
+    }
+
+    .error-box {
+      margin-top: 16px; padding: 10px 14px;
+      background: var(--danger-soft);
+      border: 1px solid var(--danger); border-radius: 6px;
+      display: flex; align-items: center; gap: 10px;
+      font-size: 13px; color: var(--danger);
+    }
+
+    .actions {
+      display: flex; gap: 10px; margin-top: 24px;
+      padding-top: 20px; border-top: 1px solid var(--border-soft);
+    }
+    .btn-primary, .btn-secondary {
+      padding: 12px 20px;
+      border: none; border-radius: 6px;
+      font-size: 14px; font-weight: 600;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center; justify-content: center; gap: 8px;
+      transition: background 0.15s;
+      font-family: inherit;
+    }
+    .btn-primary {
+      flex: 1;
+      background: var(--primary); color: #fff;
+    }
+    .btn-primary:hover { background: var(--primary-hover); }
+    .btn-secondary {
+      background: transparent; color: var(--text-soft);
+      border: 1px solid var(--border);
+      font-weight: 500;
+    }
+    .btn-secondary:hover { background: var(--bg-soft); }
+
+    /* ====== Results ====== */
+    .results { margin-top: 20px; }
+    .metrics {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 12px; margin-bottom: 16px;
+    }
+    @media (max-width: 700px) {
+      .metrics { grid-template-columns: repeat(2, 1fr); }
+    }
+    .metric {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 16px;
+      position: relative;
+      overflow: hidden;
+    }
+    .metric .bar-top {
+      position: absolute; top: 0; left: 0; right: 0;
+      height: 2px;
+    }
+    .metric .lbl {
+      font-size: 11px; color: var(--label);
+      font-weight: 500;
+      letter-spacing: 0.04em; text-transform: uppercase;
+      margin-bottom: 8px;
+      display: flex; align-items: center; gap: 6px;
+    }
+    .metric .val {
+      display: flex; align-items: baseline; gap: 6px;
+    }
+    .metric .val .num {
+      font-size: 24px; font-weight: 600;
+      letter-spacing: -0.02em;
+      font-family: var(--mono);
+    }
+    .metric .val .unit {
+      font-size: 11px; color: var(--text-muted); font-weight: 500;
+    }
+
+    .band-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 20px;
+    }
+    .band-head {
+      display: flex; justify-content: space-between;
+      align-items: center; margin-bottom: 14px;
+    }
+    .band-head-left {
+      font-size: 12px; color: var(--label); font-weight: 500;
+      letter-spacing: 0.04em; text-transform: uppercase;
+    }
+    .band-head-right {
+      font-size: 11px; color: var(--text-muted); font-family: var(--mono);
+    }
+    .band-visual {
+      position: relative; padding: 20px 0 28px;
+    }
+    .band-track {
+      position: absolute; left: 0; right: 0; top: 50%;
+      height: 4px; border-radius: 2px;
+      background: var(--border-soft);
+      transform: translateY(-50%);
+    }
+    .band-fill {
+      position: absolute; top: 50%;
+      height: 4px; border-radius: 2px;
+      background: linear-gradient(90deg, var(--primary), var(--accent));
+      transform: translateY(-50%);
+      opacity: 0.5;
+    }
+    .band-marker {
+      position: absolute; top: 50%;
+      transform: translate(-50%, -50%);
+    }
+    .band-marker .dot {
+      border-radius: 50%;
+    }
+    .band-marker .lbl-text {
+      position: absolute; left: 50%;
+      transform: translateX(-50%);
+      white-space: nowrap;
+      font-family: var(--mono);
+    }
+    .band-note {
+      margin-top: 14px;
+      font-size: 12px;
+      color: var(--text-muted);
+      line-height: 1.6;
+    }
+
+    /* ====== Sidebar ====== */
+    .aside-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 22px;
+      margin-bottom: 16px;
+    }
+    .aside-title {
+      font-size: 13px; font-weight: 600; margin: 0 0 14px;
+      display: flex; align-items: center; gap: 8px; justify-content: space-between;
+    }
+    .aside-title .ttl {
+      display: flex; align-items: center; gap: 8px;
+    }
+    .aside-title svg { color: var(--label); }
+    .param-row {
+      display: flex; justify-content: space-between;
+      align-items: center;
+      padding: 8px 0;
+      border-bottom: 1px solid var(--border-soft);
+    }
+    .param-row:last-child { border-bottom: none; }
+    .param-row .k { font-size: 12px; color: var(--label); }
+    .param-row .v {
+      font-size: 12px; font-weight: 500;
+      color: var(--text-primary); font-family: var(--mono);
+    }
+
+    .history-empty {
+      font-size: 12px; color: var(--text-muted);
+      text-align: center;
+      padding: 28px 0; line-height: 1.6;
+    }
+    .history-list {
+      display: flex; flex-direction: column; gap: 8px;
+    }
+    .history-item {
+      text-align: left; width: 100%;
+      background: var(--bg-soft);
+      border: 1px solid var(--border-soft);
+      border-radius: 6px; padding: 10px;
+      cursor: pointer; transition: border-color 0.15s;
+      font-family: inherit; color: inherit;
+    }
+    .history-item:hover { border-color: var(--primary); }
+    .history-item .h-desc {
+      font-size: 12px; font-weight: 500;
+      color: var(--text-primary);
+      margin-bottom: 4px;
+      overflow: hidden; text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .history-item .h-meta {
+      display: flex; justify-content: space-between;
+      font-size: 11px; color: var(--text-muted);
+      font-family: var(--mono);
+    }
+    .icon-btn {
+      background: transparent; border: none;
+      color: var(--text-muted); cursor: pointer; padding: 4px;
+    }
+    .icon-btn:hover { color: var(--danger); }
+
+    .footer-note {
+      margin-top: 48px; padding-top: 20px;
+      border-top: 1px solid var(--border);
+      font-size: 11px; color: var(--text-muted); text-align: center;
+    }
+
+    .hidden { display: none !important; }
+  </style>
+</head>
+<body>
+  <header class="header">
+    <div class="brand">
+      <div class="brand-mark"></div>
+      <div class="brand-name">sirros</div>
+      <div class="brand-divider"></div>
+      <div class="brand-tag">Dimensionamento de Lote</div>
+    </div>
+    <div class="status-pill">
+      <span class="status-dot"></span> Modelo ativo
+    </div>
+  </header>
+
+  <main class="main">
+    <h1 class="title">Dimensionamento de Lote</h1>
+    <p class="subtitle">
+      Informe as dimensões do novo item e o lote em uso hoje. O sistema retorna
+      o tamanho de lote proposto com banda de confiança e peso estimado.
+    </p>
+
+    <div class="grid">
+      <!-- Coluna esquerda: formulário + resultados -->
+      <div>
+        <section class="card">
+          <div class="card-head">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m7.5 4.27 9 5.15"/><path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/><path d="m3.3 7 8.7 5 8.7-5"/><path d="M12 22V12"/></svg>
+            <h2>Dados do item</h2>
+          </div>
+
+          <label class="field-label">Descrição do item <span class="opt">(opcional)</span></label>
+          <input type="text" id="descricao" placeholder="ex: BT1 190/90 F - carcaça motor" />
+
+          <div class="field-spacer">
+            <label class="field-label">Material</label>
+            <div class="material-row" id="material-row">
+              <button type="button" class="mat-btn active" data-mat="Aço">
+                <div>Aço</div><div class="density">7,85 g/cm³</div>
+              </button>
+              <button type="button" class="mat-btn" data-mat="Latão">
+                <div>Latão</div><div class="density">8,55 g/cm³</div>
+              </button>
+              <button type="button" class="mat-btn" data-mat="Zamac">
+                <div>Zamac</div><div class="density">6,70 g/cm³</div>
+              </button>
+            </div>
+          </div>
+
+          <div class="dim-grid">
+            <div>
+              <label class="field-label">Volume unitário</label>
+              <div class="input-suffix">
+                <input type="text" id="volume" inputmode="decimal" placeholder="ex: 850" />
+                <span class="suffix">mm³</span>
+              </div>
+            </div>
+            <div>
+              <label class="field-label">Área superficial</label>
+              <div class="input-suffix">
+                <input type="text" id="area" inputmode="decimal" placeholder="ex: 0,52" />
+                <span class="suffix">dm²</span>
+              </div>
+            </div>
+            <div>
+              <label class="field-label">Lote em uso</label>
+              <div class="input-suffix">
+                <input type="text" id="loteAtual" inputmode="decimal" placeholder="ex: 2500" />
+                <span class="suffix">pç</span>
+              </div>
+            </div>
+          </div>
+
+          <div id="error" class="error-box hidden">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+            <span id="error-msg"></span>
+          </div>
+
+          <div class="actions">
+            <button type="button" class="btn-primary" id="btn-calc">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="2" width="16" height="20" rx="2"/><line x1="8" y1="6" x2="16" y2="6"/><line x1="8" y1="10" x2="10" y2="10"/><line x1="8" y1="14" x2="10" y2="14"/><line x1="8" y1="18" x2="10" y2="18"/><line x1="14" y1="10" x2="16" y2="10"/><line x1="14" y1="14" x2="16" y2="14"/><line x1="14" y1="18" x2="16" y2="18"/></svg>
+              Calcular lote proposto
+            </button>
+            <button type="button" class="btn-secondary" id="btn-clear">Limpar</button>
+          </div>
+        </section>
+
+        <div class="results hidden" id="results"></div>
+      </div>
+
+      <!-- Coluna direita -->
+      <aside>
+        <div class="aside-card">
+          <div class="aside-title"><span class="ttl">Parâmetros do modelo</span></div>
+          <div class="param-row"><span class="k">Método</span><span class="v">Proprietário</span></div>
+          <div class="param-row"><span class="k">Calibração</span><span class="v">39 itens</span></div>
+          <div class="param-row"><span class="k">Acurácia (R²)</span><span class="v">0,946</span></div>
+          <div class="param-row"><span class="k">Erro mediano</span><span class="v">15,8%</span></div>
+          <div class="param-row"><span class="k">Banda ±1σ</span><span class="v">≈ ±26%</span></div>
+        </div>
+
+        <div class="aside-card">
+          <div class="aside-title">
+            <span class="ttl">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v5h5"/><path d="M3.05 13A9 9 0 1 0 6 5.3L3 8"/><path d="M12 7v5l4 2"/></svg>
+              Histórico da sessão
+            </span>
+            <button class="icon-btn hidden" id="btn-clear-hist" title="Limpar histórico">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-2 14a2 2 0 0 1-2 2H9a2 2 0 0 1-2-2L5 6"/></svg>
+            </button>
+          </div>
+          <div id="history-wrap">
+            <div class="history-empty" id="hist-empty">
+              Os cálculos desta sessão<br />aparecerão aqui.
+            </div>
+            <div class="history-list hidden" id="hist-list"></div>
+          </div>
+        </div>
+      </aside>
+    </div>
+
+    <div class="footer-note">
+      Previsão estatística · resultado deve ser validado pela engenharia
+      antes de ser aplicado em produção.
+    </div>
+  </main>
+
+  <script>
+    // === Paleta (para marcadores / cores inline) ===
+    const C = {
+      primary: '#2563EB', accent: '#3B82F6',
+      success: '#10B981', successSoft: 'rgba(16, 185, 129, 0.12)',
+      danger: '#EF4444', dangerSoft: 'rgba(239, 68, 68, 0.12)',
+      warning: '#F59E0B', warningSoft: 'rgba(245, 158, 11, 0.12)',
+      accentSoft: 'rgba(59, 130, 246, 0.12)',
+      primarySoft: 'rgba(37, 99, 235, 0.12)',
+      label: '#94A3B8', textMuted: '#64748B', bg: '#0B1220',
+    };
+
+    const DENSIDADES = { 'Aço': 7.85, 'Latão': 8.55, 'Zamac': 6.70 };
+
+    // Modelo calibrado (proprietário)
+    function calcularLote(V, A, atual) {
+      const logProposto =
+        4.8859 +
+        -0.1872 * Math.log(V) +
+        -0.5355 * Math.log(A) +
+        0.488 * Math.log(atual);
+      const proposto = Math.exp(logProposto);
+      const sigma = 0.229;
+      return {
+        proposto,
+        min: Math.exp(logProposto - sigma),
+        max: Math.exp(logProposto + sigma),
+      };
+    }
+
+    function arredondar(v) {
+      if (v < 100) return Math.round(v / 10) * 10;
+      if (v < 1000) return Math.round(v / 50) * 50;
+      if (v < 10000) return Math.round(v / 100) * 100;
+      return Math.round(v / 500) * 500;
+    }
+
+    const fmt = (n) => new Intl.NumberFormat('pt-BR', { maximumFractionDigits: 0 }).format(n);
+    const fmt2 = (n) => new Intl.NumberFormat('pt-BR', { maximumFractionDigits: 2 }).format(n);
+
+    // Estado
+    let material = 'Aço';
+    let historico = [];
+
+    // === Material pills ===
+    document.querySelectorAll('.mat-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('.mat-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        material = btn.dataset.mat;
+      });
+    });
+
+    // === Botões ===
+    document.getElementById('btn-calc').addEventListener('click', handleCalcular);
+    document.getElementById('btn-clear').addEventListener('click', handleLimpar);
+    document.getElementById('btn-clear-hist').addEventListener('click', () => {
+      historico = []; renderHistorico();
+    });
+
+    // Permitir Enter para calcular
+    ['descricao','volume','area','loteAtual'].forEach(id => {
+      document.getElementById(id).addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') handleCalcular();
+      });
+    });
+
+    function showError(msg) {
+      const box = document.getElementById('error');
+      document.getElementById('error-msg').textContent = msg;
+      box.classList.remove('hidden');
+    }
+    function hideError() {
+      document.getElementById('error').classList.add('hidden');
+    }
+
+    function handleCalcular() {
+      hideError();
+      const descricao = document.getElementById('descricao').value.trim();
+      const V = parseFloat(document.getElementById('volume').value.replace(',', '.'));
+      const A = parseFloat(document.getElementById('area').value.replace(',', '.'));
+      const atual = parseFloat(document.getElementById('loteAtual').value.replace(',', '.'));
+
+      if (!V || V <= 0) return showError('Volume unitário deve ser maior que zero.');
+      if (!A || A <= 0) return showError('Área unitária deve ser maior que zero.');
+      if (!atual || atual <= 0) return showError('Lote atual deve ser maior que zero.');
+
+      const { proposto, min, max } = calcularLote(V, A, atual);
+      const propostoArred = arredondar(proposto);
+      const minArred = arredondar(min);
+      const maxArred = arredondar(max);
+
+      const pesoUnit = (V * DENSIDADES[material]) / 1000;
+      const pesoLote = (pesoUnit * propostoArred) / 1000;
+      const variacao = ((propostoArred - atual) / atual) * 100;
+
+      const r = {
+        id: Date.now(),
+        descricao: descricao || '(sem descrição)',
+        material, V, A, atual,
+        proposto: propostoArred, min: minArred, max: maxArred,
+        variacao, pesoLote,
+      };
+
+      renderResultado(r);
+      historico = [r, ...historico].slice(0, 15);
+      renderHistorico();
+    }
+
+    function handleLimpar() {
+      document.getElementById('descricao').value = '';
+      document.getElementById('volume').value = '';
+      document.getElementById('area').value = '';
+      document.getElementById('loteAtual').value = '';
+      document.getElementById('results').classList.add('hidden');
+      document.getElementById('results').innerHTML = '';
+      hideError();
+    }
+
+    function renderResultado(r) {
+      const el = document.getElementById('results');
+      const tendencia =
+        r.variacao > 1 ? 'up' :
+        r.variacao < -1 ? 'down' : 'flat';
+
+      const corVar =
+        tendencia === 'up' ? C.warning :
+        tendencia === 'down' ? C.success : C.label;
+      const bgVar =
+        tendencia === 'up' ? C.warningSoft :
+        tendencia === 'down' ? C.successSoft : 'transparent';
+
+      const iconVar =
+        tendencia === 'up'
+          ? '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg>'
+          : tendencia === 'down'
+          ? '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 18 13.5 8.5 8.5 13.5 1 6"/><polyline points="17 18 23 18 23 12"/></svg>'
+          : '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/></svg>';
+
+      el.innerHTML = `
+        <div class="metrics">
+          ${metricHtml('Lote atual', fmt(r.atual), 'pç', C.danger, C.dangerSoft)}
+          ${metricHtml('Lote proposto', fmt(r.proposto), 'pç', C.primary, C.primarySoft, true)}
+          ${metricHtml(
+            'Variação',
+            (r.variacao >= 0 ? '+' : '') + fmt2(r.variacao),
+            '%',
+            corVar, bgVar, false, iconVar
+          )}
+          ${metricHtml('Peso do lote', fmt2(r.pesoLote), 'kg', C.accent, C.accentSoft)}
+        </div>
+
+        <div class="band-card">
+          <div class="band-head">
+            <div class="band-head-left">Banda de confiança · ±1σ (≈±26%)</div>
+            <div class="band-head-right">${fmt(r.min)} — ${fmt(r.max)} pç</div>
+          </div>
+          ${bandaHtml(r)}
+          <div class="band-note">
+            O intervalo acima representa ±1 desvio-padrão do modelo
+            calibrado. Aproximadamente 68% das previsões ficam dentro
+            desta banda. Use o ponto proposto como referência e ajuste
+            conforme restrições operacionais.
+          </div>
+        </div>
+      `;
+      el.classList.remove('hidden');
+    }
+
+    function metricHtml(label, num, unit, cor, bg, highlight = false, icon = '') {
+      const barTop = highlight ? `<div class="bar-top" style="background:${cor}"></div>` : '';
+      const borderColor = highlight ? cor : 'var(--border)';
+      return `
+        <div class="metric" style="background:${bg}; border-color:${borderColor}">
+          ${barTop}
+          <div class="lbl">${icon ? `<span style="color:${cor}; display:inline-flex">${icon}</span>` : ''}${label}</div>
+          <div class="val">
+            <span class="num" style="color:${cor}">${num}</span>
+            <span class="unit">${unit}</span>
+          </div>
+        </div>
+      `;
+    }
+
+    function bandaHtml(r) {
+      const low = Math.min(r.min, r.atual) * 0.9;
+      const high = Math.max(r.max, r.atual) * 1.1;
+      const range = high - low;
+      const pos = (v) => ((v - low) / range) * 100 + '%';
+      const fillLeft = pos(r.min);
+      const fillWidth = `calc(${pos(r.max)} - ${pos(r.min)})`;
+
+      return `
+        <div class="band-visual">
+          <div class="band-track"></div>
+          <div class="band-fill" style="left:${fillLeft}; width:${fillWidth}"></div>
+          ${markerHtml(pos(r.min), `min ${fmt(r.min)}`, C.textMuted, 'below', 'small')}
+          ${markerHtml(pos(r.max), `max ${fmt(r.max)}`, C.textMuted, 'below', 'small')}
+          ${markerHtml(pos(r.atual), `atual ${fmt(r.atual)}`, C.danger, 'above')}
+          ${markerHtml(pos(r.proposto), `proposto ${fmt(r.proposto)}`, C.primary, 'below', 'big')}
+        </div>
+      `;
+    }
+
+    function markerHtml(position, label, color, labelPos, size) {
+      const dotSize = size === 'big' ? 14 : size === 'small' ? 6 : 10;
+      const border = size === 'big' ? `border:3px solid ${C.bg}; box-shadow: 0 0 0 1px ${color}, 0 0 12px ${color};` : '';
+      const top = labelPos === 'above' ? '-22px' : '18px';
+      const fontSize = size === 'small' ? 9 : 10;
+      const opacity = size === 'small' ? 0.6 : 1;
+      const weight = size === 'small' ? 400 : 500;
+      return `
+        <div class="band-marker" style="left:${position}">
+          <div class="dot" style="width:${dotSize}px; height:${dotSize}px; background:${color}; ${border}"></div>
+          <div class="lbl-text" style="top:${top}; color:${color}; font-size:${fontSize}px; font-weight:${weight}; opacity:${opacity}">${label}</div>
+        </div>
+      `;
+    }
+
+    function renderHistorico() {
+      const emp = document.getElementById('hist-empty');
+      const list = document.getElementById('hist-list');
+      const btnClear = document.getElementById('btn-clear-hist');
+
+      if (historico.length === 0) {
+        emp.classList.remove('hidden');
+        list.classList.add('hidden');
+        btnClear.classList.add('hidden');
+        return;
+      }
+
+      emp.classList.add('hidden');
+      list.classList.remove('hidden');
+      btnClear.classList.remove('hidden');
+
+      list.innerHTML = historico.map(h => {
+        const corVar = h.variacao > 1 ? C.warning : h.variacao < -1 ? C.success : C.textMuted;
+        return `
+          <button class="history-item" data-id="${h.id}">
+            <div class="h-desc">${escape(h.descricao)}</div>
+            <div class="h-meta">
+              <span>${h.material} · ${fmt(h.atual)} → ${fmt(h.proposto)}</span>
+              <span style="color:${corVar}">${h.variacao >= 0 ? '+' : ''}${fmt2(h.variacao)}%</span>
+            </div>
+          </button>
+        `;
+      }).join('');
+
+      list.querySelectorAll('.history-item').forEach(el => {
+        el.addEventListener('click', () => {
+          const h = historico.find(x => x.id == el.dataset.id);
+          if (h) renderResultado(h);
+        });
+      });
+    }
+
+    function escape(s) {
+      return String(s).replace(/[&<>"']/g, c => ({
+        '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'
+      }[c]));
+    }
+  </script>
+</body>
+</html>
