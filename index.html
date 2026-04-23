@@ -214,6 +214,13 @@
       font-family: var(--mono);
       pointer-events: none;
     }
+    .input-preview {
+      font-size: 10px; color: var(--text-muted);
+      font-family: var(--mono);
+      margin-top: 4px; min-height: 12px;
+      padding-left: 2px;
+    }
+    .input-preview.ok { color: var(--success); }
 
     .error-box {
       margin-top: 16px; padding: 10px 14px;
@@ -467,23 +474,26 @@
             <div>
               <label class="field-label">Volume unitário</label>
               <div class="input-suffix">
-                <input type="text" id="volume" inputmode="decimal" placeholder="ex: 850" />
+                <input type="text" id="volume" inputmode="decimal" placeholder="ex: 22,483" />
                 <span class="suffix">mm³</span>
               </div>
+              <div class="input-preview" id="prev-volume"></div>
             </div>
             <div>
               <label class="field-label">Área superficial</label>
               <div class="input-suffix">
-                <input type="text" id="area" inputmode="decimal" placeholder="ex: 0,52" />
+                <input type="text" id="area" inputmode="decimal" placeholder="ex: 0,0158" />
                 <span class="suffix">dm²</span>
               </div>
+              <div class="input-preview" id="prev-area"></div>
             </div>
             <div>
               <label class="field-label">Lote em uso</label>
               <div class="input-suffix">
-                <input type="text" id="loteAtual" inputmode="decimal" placeholder="ex: 2500" />
+                <input type="text" id="loteAtual" inputmode="decimal" placeholder="ex: 97.485" />
                 <span class="suffix">pç</span>
               </div>
+              <div class="input-preview" id="prev-loteAtual"></div>
             </div>
           </div>
 
@@ -617,12 +627,47 @@
       document.getElementById('error').classList.add('hidden');
     }
 
+    // === Parser de número BR ===
+    // Regra: se tem vírgula, vírgula é decimal e pontos são milhares (remover).
+    //        se só tem pontos, todos são milhares (remover).
+    function parseBR(str) {
+      if (str == null) return NaN;
+      const s = String(str).trim();
+      if (s === '') return NaN;
+      let cleaned;
+      if (s.includes(',')) {
+        cleaned = s.replace(/\./g, '').replace(',', '.');
+      } else {
+        cleaned = s.replace(/\./g, '');
+      }
+      const n = parseFloat(cleaned);
+      return isNaN(n) ? NaN : n;
+    }
+
+    // Preview em tempo real do valor que foi lido
+    function updatePreview(inputId, previewId) {
+      const raw = document.getElementById(inputId).value;
+      const prev = document.getElementById(previewId);
+      if (raw.trim() === '') { prev.textContent = ''; prev.classList.remove('ok'); return; }
+      const n = parseBR(raw);
+      if (isNaN(n)) {
+        prev.textContent = 'valor inválido';
+        prev.classList.remove('ok');
+      } else {
+        prev.textContent = '= ' + new Intl.NumberFormat('pt-BR', { maximumFractionDigits: 4 }).format(n);
+        prev.classList.add('ok');
+      }
+    }
+    [['volume','prev-volume'],['area','prev-area'],['loteAtual','prev-loteAtual']].forEach(([i,p]) => {
+      document.getElementById(i).addEventListener('input', () => updatePreview(i, p));
+    });
+
     function handleCalcular() {
       hideError();
       const descricao = document.getElementById('descricao').value.trim();
-      const V = parseFloat(document.getElementById('volume').value.replace(',', '.'));
-      const A = parseFloat(document.getElementById('area').value.replace(',', '.'));
-      const atual = parseFloat(document.getElementById('loteAtual').value.replace(',', '.'));
+      const V = parseBR(document.getElementById('volume').value);
+      const A = parseBR(document.getElementById('area').value);
+      const atual = parseBR(document.getElementById('loteAtual').value);
 
       if (!V || V <= 0) return showError('Volume unitário deve ser maior que zero.');
       if (!A || A <= 0) return showError('Área unitária deve ser maior que zero.');
@@ -655,6 +700,10 @@
       document.getElementById('volume').value = '';
       document.getElementById('area').value = '';
       document.getElementById('loteAtual').value = '';
+      ['prev-volume','prev-area','prev-loteAtual'].forEach(id => {
+        const p = document.getElementById(id);
+        p.textContent = ''; p.classList.remove('ok');
+      });
       document.getElementById('results').classList.add('hidden');
       document.getElementById('results').innerHTML = '';
       hideError();
