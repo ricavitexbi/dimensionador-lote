@@ -140,6 +140,52 @@
     }
     .card-head svg { color: var(--accent); }
 
+    /* Toggle "tem lote em uso" */
+    .mode-toggle {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 12px 14px;
+      background: var(--bg-soft);
+      border: 1px solid var(--border-soft);
+      border-radius: 8px;
+      margin-bottom: 22px;
+    }
+    .mode-toggle-label {
+      font-size: 13px; color: var(--text-soft); font-weight: 500;
+    }
+    .mode-toggle-label .hint {
+      display: block; font-size: 11px; color: var(--text-muted); margin-top: 2px; font-weight: 400;
+    }
+    .mode-toggle-buttons {
+      display: flex; gap: 0;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 2px;
+    }
+    .mode-btn {
+      padding: 6px 16px;
+      font-size: 12px; font-weight: 500;
+      background: transparent; border: none;
+      color: var(--text-muted);
+      cursor: pointer; border-radius: 4px;
+      font-family: inherit;
+      transition: all 0.15s;
+    }
+    .mode-btn.active {
+      background: var(--primary);
+      color: #fff;
+    }
+
+    .mode-warning {
+      margin-top: 16px; padding: 10px 14px;
+      background: var(--warning-soft);
+      border: 1px solid var(--warning);
+      border-radius: 6px;
+      display: flex; align-items: flex-start; gap: 10px;
+      font-size: 12px; color: var(--warning);
+      line-height: 1.5;
+    }
+
     /* ====== Form ====== */
     .field-label {
       display: block;
@@ -200,8 +246,11 @@
       gap: 14px;
       margin-top: 20px;
     }
+    .dim-grid.no-lote {
+      grid-template-columns: 1fr 1fr;
+    }
     @media (max-width: 600px) {
-      .dim-grid { grid-template-columns: 1fr; }
+      .dim-grid, .dim-grid.no-lote { grid-template-columns: 1fr; }
     }
     .input-suffix {
       position: relative;
@@ -452,6 +501,17 @@
             <h2>Dados do item</h2>
           </div>
 
+          <div class="mode-toggle">
+            <div class="mode-toggle-label">
+              Tem lote em uso?
+              <span class="hint">Use "Não" para itens novos sem histórico</span>
+            </div>
+            <div class="mode-toggle-buttons">
+              <button type="button" class="mode-btn active" data-mode="com">Sim</button>
+              <button type="button" class="mode-btn" data-mode="sem">Não</button>
+            </div>
+          </div>
+
           <label class="field-label">Descrição do item <span class="opt">(opcional)</span></label>
           <input type="text" id="descricao" placeholder="ex: BT1 190/90 F - carcaça motor" />
 
@@ -470,7 +530,7 @@
             </div>
           </div>
 
-          <div class="dim-grid">
+          <div class="dim-grid" id="dim-grid">
             <div>
               <label class="field-label">Volume unitário</label>
               <div class="input-suffix">
@@ -487,7 +547,7 @@
               </div>
               <div class="input-preview" id="prev-area"></div>
             </div>
-            <div>
+            <div id="field-lote">
               <label class="field-label">Lote em uso</label>
               <div class="input-suffix">
                 <input type="text" id="loteAtual" inputmode="decimal" placeholder="ex: 97.485" />
@@ -519,10 +579,11 @@
         <div class="aside-card">
           <div class="aside-title"><span class="ttl">Parâmetros do modelo</span></div>
           <div class="param-row"><span class="k">Método</span><span class="v">Proprietário</span></div>
-          <div class="param-row"><span class="k">Calibração</span><span class="v">39 itens</span></div>
-          <div class="param-row"><span class="k">Acurácia (R²)</span><span class="v">0,946</span></div>
-          <div class="param-row"><span class="k">Erro mediano</span><span class="v">15,8%</span></div>
-          <div class="param-row"><span class="k">Banda ±1σ</span><span class="v">≈ ±26%</span></div>
+          <div class="param-row"><span class="k">Calibração</span><span class="v">40 itens</span></div>
+          <div class="param-row"><span class="k">Variáveis</span><span class="v" id="p-vars">V · A · lote</span></div>
+          <div class="param-row"><span class="k">Acurácia (R²)</span><span class="v" id="p-r2">0,943</span></div>
+          <div class="param-row"><span class="k">Erro mediano</span><span class="v" id="p-err">15,1%</span></div>
+          <div class="param-row"><span class="k">Banda ±1σ</span><span class="v" id="p-band">≈ ±26%</span></div>
         </div>
 
         <div class="aside-card">
@@ -565,19 +626,53 @@
 
     const DENSIDADES = { 'Aço': 7.85, 'Latão': 8.55, 'Zamac': 6.70 };
 
-    // Modelo calibrado (proprietário)
+    // Modelos calibrados (proprietário)
+    // Completo: V + A + lote_atual  (R² 0,943, banda ±26%)
+    // Reduzido: V + A               (R² 0,869, banda ±42%)
+    const MODELOS = {
+      com: {
+        intercept: 5.2775,
+        bV: -0.3249,
+        bA: -0.2370,
+        bAtual: 0.5993,
+        sigma: 0.2349,
+        r2: '0,943',
+        erro: '15,1%',
+        banda: '≈ ±26%',
+        bandaPct: 0.265,
+        vars: 'V · A · lote',
+      },
+      sem: {
+        intercept: 12.1382,
+        bV: -0.6862,
+        bA: -0.5283,
+        bAtual: 0,
+        sigma: 0.3509,
+        r2: '0,869',
+        erro: '25,4%',
+        banda: '≈ ±42%',
+        bandaPct: 0.420,
+        vars: 'V · A',
+      },
+    };
+
+    // Estado
+    let material = 'Aço';
+    let modo = 'com';  // 'com' ou 'sem' lote em uso
+    let historico = [];
+
     function calcularLote(V, A, atual) {
+      const m = MODELOS[modo];
       const logProposto =
-        4.8859 +
-        -0.1872 * Math.log(V) +
-        -0.5355 * Math.log(A) +
-        0.488 * Math.log(atual);
+        m.intercept +
+        m.bV * Math.log(V) +
+        m.bA * Math.log(A) +
+        (modo === 'com' ? m.bAtual * Math.log(atual) : 0);
       const proposto = Math.exp(logProposto);
-      const sigma = 0.229;
       return {
         proposto,
-        min: Math.exp(logProposto - sigma),
-        max: Math.exp(logProposto + sigma),
+        min: Math.exp(logProposto - m.sigma),
+        max: Math.exp(logProposto + m.sigma),
       };
     }
 
@@ -591,16 +686,43 @@
     const fmt = (n) => new Intl.NumberFormat('pt-BR', { maximumFractionDigits: 0 }).format(n);
     const fmt2 = (n) => new Intl.NumberFormat('pt-BR', { maximumFractionDigits: 2 }).format(n);
 
-    // Estado
-    let material = 'Aço';
-    let historico = [];
-
     // === Material pills ===
     document.querySelectorAll('.mat-btn').forEach(btn => {
       btn.addEventListener('click', () => {
         document.querySelectorAll('.mat-btn').forEach(b => b.classList.remove('active'));
         btn.classList.add('active');
         material = btn.dataset.mat;
+      });
+    });
+
+    // === Mode toggle (com / sem lote em uso) ===
+    function aplicarModo() {
+      const m = MODELOS[modo];
+      const fieldLote = document.getElementById('field-lote');
+      const dimGrid = document.getElementById('dim-grid');
+      if (modo === 'sem') {
+        fieldLote.classList.add('hidden');
+        dimGrid.classList.add('no-lote');
+      } else {
+        fieldLote.classList.remove('hidden');
+        dimGrid.classList.remove('no-lote');
+      }
+      // Atualiza aside
+      document.getElementById('p-vars').textContent = m.vars;
+      document.getElementById('p-r2').textContent = m.r2;
+      document.getElementById('p-err').textContent = m.erro;
+      document.getElementById('p-band').textContent = m.banda;
+      // Esconde resultado (pode estar obsoleto)
+      document.getElementById('results').classList.add('hidden');
+      document.getElementById('results').innerHTML = '';
+      hideError();
+    }
+    document.querySelectorAll('.mode-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('.mode-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        modo = btn.dataset.mode;
+        aplicarModo();
       });
     });
 
@@ -667,11 +789,13 @@
       const descricao = document.getElementById('descricao').value.trim();
       const V = parseBR(document.getElementById('volume').value);
       const A = parseBR(document.getElementById('area').value);
-      const atual = parseBR(document.getElementById('loteAtual').value);
+      const atual = modo === 'com' ? parseBR(document.getElementById('loteAtual').value) : null;
 
       if (!V || V <= 0) return showError('Volume unitário deve ser maior que zero.');
       if (!A || A <= 0) return showError('Área unitária deve ser maior que zero.');
-      if (!atual || atual <= 0) return showError('Lote atual deve ser maior que zero.');
+      if (modo === 'com' && (!atual || atual <= 0)) {
+        return showError('Lote atual deve ser maior que zero.');
+      }
 
       const { proposto, min, max } = calcularLote(V, A, atual);
       const propostoArred = arredondar(proposto);
@@ -680,7 +804,7 @@
 
       const pesoUnit = (V * DENSIDADES[material]) / 1000;
       const pesoLote = (pesoUnit * propostoArred) / 1000;
-      const variacao = ((propostoArred - atual) / atual) * 100;
+      const variacao = atual ? ((propostoArred - atual) / atual) * 100 : null;
 
       const r = {
         id: Date.now(),
@@ -688,6 +812,7 @@
         material, V, A, atual,
         proposto: propostoArred, min: minArred, max: maxArred,
         variacao, pesoLote,
+        modo,
       };
 
       renderResultado(r);
@@ -711,49 +836,60 @@
 
     function renderResultado(r) {
       const el = document.getElementById('results');
-      const tendencia =
-        r.variacao > 1 ? 'up' :
-        r.variacao < -1 ? 'down' : 'flat';
+      const temLote = r.atual != null;
 
-      const corVar =
-        tendencia === 'up' ? C.warning :
-        tendencia === 'down' ? C.success : C.label;
-      const bgVar =
-        tendencia === 'up' ? C.warningSoft :
-        tendencia === 'down' ? C.successSoft : 'transparent';
+      // Monta métricas dinamicamente
+      let metricsHtml;
+      if (temLote) {
+        const tendencia =
+          r.variacao > 1 ? 'up' :
+          r.variacao < -1 ? 'down' : 'flat';
+        const corVar =
+          tendencia === 'up' ? C.warning :
+          tendencia === 'down' ? C.success : C.label;
+        const bgVar =
+          tendencia === 'up' ? C.warningSoft :
+          tendencia === 'down' ? C.successSoft : 'transparent';
+        const iconVar =
+          tendencia === 'up'
+            ? '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg>'
+            : tendencia === 'down'
+            ? '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 18 13.5 8.5 8.5 13.5 1 6"/><polyline points="17 18 23 18 23 12"/></svg>'
+            : '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/></svg>';
 
-      const iconVar =
-        tendencia === 'up'
-          ? '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg>'
-          : tendencia === 'down'
-          ? '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 18 13.5 8.5 8.5 13.5 1 6"/><polyline points="17 18 23 18 23 12"/></svg>'
-          : '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/></svg>';
+        metricsHtml = `
+          <div class="metrics">
+            ${metricHtml('Lote atual', fmt(r.atual), 'pç', C.danger, C.dangerSoft)}
+            ${metricHtml('Lote proposto', fmt(r.proposto), 'pç', C.primary, C.primarySoft, true)}
+            ${metricHtml('Variação', (r.variacao >= 0 ? '+' : '') + fmt2(r.variacao), '%', corVar, bgVar, false, iconVar)}
+            ${metricHtml('Peso do lote', fmt2(r.pesoLote), 'kg', C.accent, C.accentSoft)}
+          </div>`;
+      } else {
+        // Sem lote em uso — apenas 2 métricas (proposto + peso)
+        metricsHtml = `
+          <div class="metrics" style="grid-template-columns: repeat(2, 1fr)">
+            ${metricHtml('Lote proposto', fmt(r.proposto), 'pç', C.primary, C.primarySoft, true)}
+            ${metricHtml('Peso do lote', fmt2(r.pesoLote), 'kg', C.accent, C.accentSoft)}
+          </div>`;
+      }
+
+      const bandaLabel = (r.modo === 'sem')
+        ? 'Banda de confiança · ±1σ (≈±42%)'
+        : 'Banda de confiança · ±1σ (≈±26%)';
+
+      const notaBanda = (r.modo === 'sem')
+        ? 'Como não há lote em uso como referência, o modelo usa apenas volume e área. A banda fica mais larga — cerca de ±42% — porque fatores como complexidade de setup e criticidade do item ficam fora da conta. Use o valor proposto como ponto de partida e ajuste após as primeiras produções.'
+        : 'O intervalo acima representa ±1 desvio-padrão do modelo calibrado. Aproximadamente 68% das previsões ficam dentro desta banda. Use o ponto proposto como referência e ajuste conforme restrições operacionais.';
 
       el.innerHTML = `
-        <div class="metrics">
-          ${metricHtml('Lote atual', fmt(r.atual), 'pç', C.danger, C.dangerSoft)}
-          ${metricHtml('Lote proposto', fmt(r.proposto), 'pç', C.primary, C.primarySoft, true)}
-          ${metricHtml(
-            'Variação',
-            (r.variacao >= 0 ? '+' : '') + fmt2(r.variacao),
-            '%',
-            corVar, bgVar, false, iconVar
-          )}
-          ${metricHtml('Peso do lote', fmt2(r.pesoLote), 'kg', C.accent, C.accentSoft)}
-        </div>
-
+        ${metricsHtml}
         <div class="band-card">
           <div class="band-head">
-            <div class="band-head-left">Banda de confiança · ±1σ (≈±26%)</div>
+            <div class="band-head-left">${bandaLabel}</div>
             <div class="band-head-right">${fmt(r.min)} — ${fmt(r.max)} pç</div>
           </div>
           ${bandaHtml(r)}
-          <div class="band-note">
-            O intervalo acima representa ±1 desvio-padrão do modelo
-            calibrado. Aproximadamente 68% das previsões ficam dentro
-            desta banda. Use o ponto proposto como referência e ajuste
-            conforme restrições operacionais.
-          </div>
+          <div class="band-note">${notaBanda}</div>
         </div>
       `;
       el.classList.remove('hidden');
@@ -775,12 +911,21 @@
     }
 
     function bandaHtml(r) {
-      const low = Math.min(r.min, r.atual) * 0.9;
-      const high = Math.max(r.max, r.atual) * 1.1;
+      const temLote = r.atual != null;
+      const low = temLote
+        ? Math.min(r.min, r.atual) * 0.9
+        : r.min * 0.85;
+      const high = temLote
+        ? Math.max(r.max, r.atual) * 1.1
+        : r.max * 1.15;
       const range = high - low;
       const pos = (v) => ((v - low) / range) * 100 + '%';
       const fillLeft = pos(r.min);
       const fillWidth = `calc(${pos(r.max)} - ${pos(r.min)})`;
+
+      const atualMarker = temLote
+        ? markerHtml(pos(r.atual), `atual ${fmt(r.atual)}`, C.danger, 'above')
+        : '';
 
       return `
         <div class="band-visual">
@@ -788,7 +933,7 @@
           <div class="band-fill" style="left:${fillLeft}; width:${fillWidth}"></div>
           ${markerHtml(pos(r.min), `min ${fmt(r.min)}`, C.textMuted, 'below', 'small')}
           ${markerHtml(pos(r.max), `max ${fmt(r.max)}`, C.textMuted, 'below', 'small')}
-          ${markerHtml(pos(r.atual), `atual ${fmt(r.atual)}`, C.danger, 'above')}
+          ${atualMarker}
           ${markerHtml(pos(r.proposto), `proposto ${fmt(r.proposto)}`, C.primary, 'below', 'big')}
         </div>
       `;
@@ -826,13 +971,22 @@
       btnClear.classList.remove('hidden');
 
       list.innerHTML = historico.map(h => {
-        const corVar = h.variacao > 1 ? C.warning : h.variacao < -1 ? C.success : C.textMuted;
+        const temLote = h.atual != null;
+        const corVar = temLote
+          ? (h.variacao > 1 ? C.warning : h.variacao < -1 ? C.success : C.textMuted)
+          : C.textMuted;
+        const metaEsquerda = temLote
+          ? `${h.material} · ${fmt(h.atual)} → ${fmt(h.proposto)}`
+          : `${h.material} · novo → ${fmt(h.proposto)}`;
+        const metaDireita = temLote
+          ? `${h.variacao >= 0 ? '+' : ''}${fmt2(h.variacao)}%`
+          : 'item novo';
         return `
           <button class="history-item" data-id="${h.id}">
             <div class="h-desc">${escape(h.descricao)}</div>
             <div class="h-meta">
-              <span>${h.material} · ${fmt(h.atual)} → ${fmt(h.proposto)}</span>
-              <span style="color:${corVar}">${h.variacao >= 0 ? '+' : ''}${fmt2(h.variacao)}%</span>
+              <span>${metaEsquerda}</span>
+              <span style="color:${corVar}">${metaDireita}</span>
             </div>
           </button>
         `;
